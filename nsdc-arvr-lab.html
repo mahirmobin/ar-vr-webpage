@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSDC ARVR Lab - Hardware Inventory</title>
+    
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Google Model Viewer for 3D Models -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background: #000000;
+            color: #f5f5f7;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            margin-top: 60px;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(16, 0, 118, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            right: -50px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0,153,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -50px;
+            left: -100px;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(20px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 60px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 5.5rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff 0%, #0099ff 50%, #ffffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.8rem;
+            color: #a1a1a6;
+            font-weight: 500;
+            margin-bottom: 40px;
+            letter-spacing: 0.5px;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            animation: bounce 3s infinite;
+            font-size: 24px;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(10px); }
+        }
+
+        /* Navigation */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 16px 0;
+            backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f5f5f7;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover,
+        .nav-btn.active {
+            background: #ffffff;
+            color: #000;
+            border-color: #39344b;
+            box-shadow: 0 0 20px rgba(0,255,200,0.4);
+            transform: scale(1.05);
+        }
+
+        .search-box {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            color: #f5f5f7;
+            font-size: 0.9rem;
+            width: 200px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box::placeholder { color: rgba(255, 255, 255, 0.5); }
+        .search-box:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #32364b;
+            box-shadow: 0 0 10px rgba(0, 64, 255, 0.3);
+        }
+
+        /* Section Styling */
+        section {
+            padding: 100px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 60px;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+
+        /* Stats Container */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin: 80px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,255,200,0.05) 100%);
+            padding: 40px 30px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(196, 185, 185, 0.1);
+            backdrop-filter: blur(20px);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .stat-card:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(0,153,255,0.1) 100%);
+            border-color: #001665;
+            transform: translateY(-15px);
+            box-shadow: 0 20px 40px rgba(0,255,200,0.15);
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00ffc8, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #a1a1a6;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Hardware Grid */
+        .hardware-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 40px;
+            margin-bottom: 80px;
+        }
+
+        /* Hardware Card */
+        .hardware-card {
+            background: linear-gradient(135deg, rgba(23, 23, 39, 0.05) 0%, rgba(255,255,255,0.02) 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .hardware-card:hover {
+            transform: translateY(-20px);
+            border-color: #4000ff;
+            box-shadow: 0 25px 50px rgba(34, 0, 255, 0.25);
+            background: linear-gradient(135deg, rgba(0,255,200,0.1) 0%, rgba(0,153,255,0.05) 100%);
+        }
+
+        /* 3D Model Styling */
+        model-viewer {
+            width: 100%;
+            height: 280px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .card-image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    overflow: hidden; /* important for zoom */
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    cursor: zoom-in;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease, transform-origin 0.1s ease;
+    transform: scale(1.5); /* base zoom level */
+}
+
+        
+
+        .hardware-card:hover .card-image {
+            transform: scale(1.05);
+        }
+
+
+        .card-image-wrapper:hover .video-btn {
+            background: rgba(170, 170, 170, 0.4);
+            border-color: #4800ff;
+            box-shadow: 0 0 25px rgba(0, 0, 255, 0.6);
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        .card-content { padding: 40px 30px; }
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #f5f5f7;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+
+        .card-purpose {
+            background: linear-gradient(135deg, #0051ff, #0099ff);
+            color: #ced6dd;
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .card-specs {
+            font-size: 0.95rem;
+            color: #a1a1a6;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .spec-item { margin-bottom: 8px; }
+
+        .quantity-badge {
+            background: linear-gradient(135deg, #ffffff, #ffffff);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .usage-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .usage-title {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .usage-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .usage-tag {
+            background: rgba(126, 154, 184, 0.15);
+            color: #00a2ff;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(200, 219, 215, 0.3);
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .usage-tag:hover {
+            background: rgba(162, 165, 164, 0.25);
+            border-color: #37597c;
+            box-shadow: 0 0 12px rgba(0, 204, 255, 0.4);
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 80px 0 50px 0;
+            padding-bottom: 20px;
+           
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            letter-spacing: -0.3px;
+        }
+
+        .section-title .icon { font-size: 2.5rem; }
+
+        /* Footer */
+        footer {
+            background: linear-gradient(180deg, #000 0%, #1a1a1a 100%);
+            color: #a1a1a6;
+            text-align: center;
+            padding: 80px 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 100px;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+        }
+
+        /* Empty State */
+        .empty-state { text-align: center; padding: 100px 40px; color: #a1a1a6; }
+        .empty-state h2 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: #f5f5f7;
+            font-weight: 700;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-content {
+            position: relative;
+            width: 95%; max-width: 1000px;
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid #0095ff;
+            box-shadow: 0 25px 60px rgba(0, 123, 255, 0.3);
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: #0044ff;
+            border: none;
+            color: #000;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #0051d4;
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero h1 { font-size: 3.5rem; }
+            section h2 { font-size: 2.5rem; }
+            .hardware-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; }
+            section { padding: 80px 30px; }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            section h2 { font-size: 2rem; }
+            section { padding: 50px 20px; }
+            .hardware-grid { grid-template-columns: 1fr; gap: 25px; }
+            .nav-container { gap: 10px; padding: 0 10px; justify-content: center; }
+            .nav-btn { padding: 6px 12px; font-size: 0.8rem; }
+            .search-box { width: 100%; order: 10; flex-basis: 100%; margin-top: 10px; }
+            .hero { margin-top: 80px; }
+            .hero h1 { font-size: 2rem; margin-bottom: 15px; }
+            .hero p { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const hardwareData = [
+            {
+                name: "HTC Vive Pro with Body Trackers",
+                category: "headsets",
+                image: "https://pplx-res.cloudinary.com/image/upload/v1762963610/search_images/77a65e948ad388efae681a318b41ee040eef1937.jpg",
+                purpose: "Virtual Reality System",
+                specs: ["Full-body motion capture", "2K AMOLED displays", "Dual handheld controllers", "110° field of view"],
+                quantity: 1,
+                usage: ["VR development", "Immersive training", "Simulation testing", "Research"],
+                
+         
+                // modelUrl: "htc_vive_pro.glb" 
+            },
+            {
+                name: "Meta Quest 3S Advanced VR Headset",
+                category: "headsets",
+                image:  "metaquest.png",
+                purpose: "All-in-One VR/MR",
+                specs: ["3664 x 1920 pixel resolution", "Mixed Reality capable", "Spatial audio", "3-hour battery life"],
+                quantity: 3,
+                usage: ["Mixed reality apps", "Content creation", "Gaming & entertainment", "Team collaboration"],
+                
+            },  
+            {
+                name: "Meta Ray-Ban Smart Sunglasses",
+                category: "headsets",
+                image: "rayban.png",
+                purpose: "AR Smart Eyewear",
+                specs: ["SLAM-based spatial awareness", "Built-in cameras", "Real-time video capture", "Lightweight design"],
+                quantity: 1,
+                usage: ["Augmented reality experiences", "Video documentation", "Mobile AR prototyping", "Field research"]
+            },
+            {
+                name: "Apple Vision Pro",
+                category: "headsets",
+                image: "https://pplx-res.cloudinary.com/image/upload/v1762964910/search_images/e65c45b40f6c1553af0a9fe11c09102b2af56a07.jpg",
+                purpose: "Spatial Computing Device",
+                specs: ["Dual Micro OLED displays", "Eye tracking & hand gesture", "M2 chip", "2-hour battery"],
+                quantity: 1,
+                usage: ["Spatial computing development", "Advanced MR research", "Professional applications", "3D content creation"],
+                
+                // modelUrl: "apple_vision_pro.glb"
+            },
+            {
+                name: "Vive Tracker v2.0 with Calibration Props",
+                category: "tracking",
+                image: "https://pplx-res.cloudinary.com/image/upload/v1766993542/search_images/ca86cdc36e1326794aa3482bdce8df5152a36aad.jpg",
+                purpose: "Motion Tracking System",
+                specs: ["Full-body tracking", "32 tracking points", "Wireless connectivity", "Calibration kits included"],
+                quantity: 4,
+                usage: ["Gesture recognition", "Full-body capture", "Avatar animation", "Movement tracking"],
+                // modelUrl: "htc_vive_tracker.glb"
+            },
+            {
+                name: "XP-PEN Artist 2nd Gen Display Tablet",
+                category: "tracking",
+                image: "xp.png",
+                purpose: "Pen Display Tablet",
+                specs: ["10.1-inch IPS display", "8192 pressure levels", "USB-C connectivity", "Full-color stylus"],
+                quantity: 1,
+                usage: ["Digital illustration", "3D model editing", "UI/UX design", "Content creation"]
+            },
+            {
+                name: "Samsung Tablet A9",
+                category: "ar",
+                image: "tab.png",
+                purpose: "AR Tablet Device",
+                specs: ["8.7-inch LCD screen", "90Hz refresh rate", "Quad speakers", "6000mAh battery"],
+                quantity: 2,
+                usage: ["Mobile AR development", "App testing", "Portable demonstrations", "Student training"]
+            },
+            {
+                name: "AR Earth Kit",
+                category: "ar",
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23667eea' width='400' height='300'/%3E%3Ccircle cx='200' cy='150' r='80' fill='%231e90ff'/%3E%3C/svg%3E",
+                purpose: "Educational AR Tool",
+                specs: ["Interactive globe", "Spatial AR features", "Multi-platform support", "Educational content"],
+                quantity: 1,
+                usage: ["Geography learning", "AR interaction design", "Educational prototyping", "Student projects"]
+            },
+            {
+                name: "Insta360 X4 8K Action Camera",
+                category: "cameras",
+                image: "https://pplx-res.cloudinary.com/image/upload/v1766993543/search_images/874339a3c3860932a973e3a15d083d7151e62376.jpg",
+                purpose: "360° 8K Camera",
+                specs: ["8K resolution", "Waterproof design", "135-minute battery", "AI editing support"],
+                quantity: 1,
+                usage: ["360° content creation", "Immersive video production", "VR content capture", "Documentation"],
+                
+            },
+            {
+                name: "Desktop Configuration (High-End)",
+                category: "computing",
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23333' width='400' height='300'/%3E%3Crect x='50' y='50' width='300' height='180' fill='%23555' stroke='%23999' stroke-width='2'/%3E%3Crect x='150' y='240' width='100' height='30' fill='%23666'/%3E%3C/svg%3E",
+                purpose: "VR Development System",
+                specs: ["i7 14th Gen / AMD equivalent", "RTX 5070 (12GB VRAM)", "64GB RAM", "2TB HDD + 1TB SSD"],
+                quantity: 2,
+                usage: ["VR app development", "3D rendering", "Real-time simulation", "Performance testing"],
+                modelUrl: "desk.glb"
+            },
+            {
+                name: "Logitech G29 Racing Wheel Setup",
+                category: "simulation",
+                image: "g29.png",
+                purpose: "Driving Simulation System",
+                specs: ["900° steering wheel", "Shifter & pedals included", "Haptic feedback", "Racing seat kit"],
+                quantity: 1,
+                usage: ["Racing simulation", "Driving training", "Vehicle dynamics learning", "Practical simulations"],
+                
+            },
+            {
+                name: "Creality Ferret 3D Scanner",
+                category: "xr",
+                image: "ferret.png",
+                purpose: "3D Scanning System",
+                specs: ["Handheld scanning", "High-resolution capture", "Real-time processing", "CAD export support"],
+                quantity: 1,
+                usage: ["Object digitization", "3D modeling", "Content creation", "Scanning demonstrations"]
+            },
+            {
+                name: "43-inch 4K Display with Prompter",
+                category: "xr",
+                image: "tv.png",
+                purpose: "Display & Presentation",
+                specs: ["4K resolution", "Embedded prompter", "Professional color", "Wide viewing angles"],
+                quantity: 1,
+                usage: ["Live demonstrations", "Content broadcasting", "Presentation", "Lab showcase"]
+            },
+            {
+                name: "Microphone & Mixer Kit",
+                category: "accessories",
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23e8e8e8' width='400' height='300'/%3E%3Ccircle cx='200' cy='120' r='40' fill='%23333'/%3E%3Crect x='120' y='200' width='160' height='60' fill='%23555'/%3E%3C/svg%3E",
+                purpose: "Audio Equipment",
+                specs: ["Wireless connectivity", "Professional mixer", "Multiple inputs", "Studio quality"],
+                quantity: 1,
+                usage: ["Audio recording", "Live streaming", "Presentation audio", "Content creation"]
+            },
+            {
+                name: "Tripods & Support Equipment",
+                category: "accessories",
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23f0f0f0' width='400' height='300'/%3E%3Cpath d='M200,50 L150,250 M200,50 L200,250 M200,50 L250,250' stroke='%23333' stroke-width='3'/%3E%3Ccircle cx='200' cy='50' r='8' fill='%23333'/%3E%3C/svg%3E",
+                purpose: "Mounting & Support",
+                specs: ["Adjustable height", "Secure mounting", "Lightweight aluminum", "Universal compatibility"],
+                quantity: 4,
+                usage: ["Camera mounting", "Display support", "Equipment stabilization", "Multi-angle setups"]
+            },
+            {
+                name: "Headset Cases & Protective Gear",
+                category: "accessories",
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23666' width='400' height='300'/%3E%3Crect x='50' y='60' width='300' height='180' fill='%23888' rx='20'/%3E%3Crect x='70' y='80' width='260' height='140' fill='%23aaa'/%3E%3C/svg%3E",
+                purpose: "Equipment Protection",
+                specs: ["Custom-fit cases", "Protective foam", "Reinforced latches", "Portable design"],
+                quantity: 4,
+                usage: ["Equipment storage", "Transportation", "Damage prevention", "Organization"]
+            },
+            {
+                name: "HDMI & Cable Accessories",
+                category: "accessories",
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23ddd' width='400' height='300'/%3E%3Crect x='100' y='120' width='200' height='60' fill='%23333' rx='10'/%3E%3Crect x='50' y='140' width='50' height='20' fill='%23666'/%3E%3Crect x='300' y='140' width='50' height='20' fill='%23666'/%3E%3C/svg%3E",
+                purpose: "Connectivity Solutions",
+                specs: ["High-speed transmission", "Various lengths", "Gold-plated connectors", "Durable construction"],
+                quantity: 2,
+                usage: ["Device connectivity", "Signal transmission", "Display connections", "Equipment linking"]
+            }
+        ];
+
+        // --- Same Helper Functions ---
+        const getCategoryIcon = (category) => {
+            const icons = {
+                headsets: '', tracking: '', ar: '', cameras: '',
+                computing: '', simulation: '', xr: '', accessories: ''
+            };
+            return icons[category] || '';
+        };
+
+        const getCategoryName = (category) => {
+            const names = {
+                headsets: 'Immersive Headsets & Wearables',
+                tracking: 'Tracking & Interaction Devices',
+                ar: 'AR Toolkits & Mobile Devices',
+                cameras: 'Cameras & Content Creation',
+                computing: 'High-End Computing Systems',
+                simulation: 'Simulation & Training Hardware',
+                xr: 'XR Studio Display & Setup',
+                accessories: 'Accessories & Lab Support'
+            };
+            return names[category] || 'Hardware';
+        };
+
+        // --- Updated Card Component ---
+  function HardwareCard({ hardware, onVideoClick }) {
+    const handleMouseMove = (e) => {
+        // Only apply to normal images, not 3D model-viewer
+        if (hardware.modelUrl) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        const img = e.currentTarget.querySelector('.card-image');
+        if (img) {
+            img.style.transformOrigin = `${x}% ${y}%`;
+        }
+    };
+
+    return (
+        <div className="hardware-card">
+            <div
+                className="card-image-wrapper"
+                onMouseMove={handleMouseMove}
+            >
+                {hardware.modelUrl ? (
+                    // 3D model (HTC Vive Pro)
+                    <model-viewer
+                        src={hardware.modelUrl}
+                        alt={hardware.name}
+                        camera-controls
+                        auto-rotate
+                        shadow-intensity="1"
+                        style={{ width: '100%', height: '100%', backgroundColor: '#1a1a2e' }}
+                    ></model-viewer>
+                ) : (
+                    <>
+                        <img
+                            src={hardware.image}
+                            alt={hardware.name}
+                            className="card-image"
+                        />
+                        {hardware.videoUrl && (
+                            <div
+                                className="video-btn"
+                                onClick={() => onVideoClick(hardware.videoUrl)}
+                                title="Watch video"
+                            >
+                                ▶️
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            <div className="card-content">
+                <h3 className="card-title">{hardware.name}</h3>
+                <span className="card-purpose">{hardware.purpose}</span>
+                <div className="card-specs">
+                    {hardware.specs.map((spec, idx) => (
+                        <div key={idx} className="spec-item">• {spec}</div>
+                    ))}
+                </div>
+                <div style={{ marginTop: '15px' }}>
+                    <span className="quantity-badge">
+                         {hardware.quantity} Unit{hardware.quantity > 1 ? 's' : ''}
+                    </span>
+                </div>
+                <div className="usage-section">
+                    <div className="usage-title">Lab Usage:</div>
+                    <div className="usage-tags">
+                        {hardware.usage.map((use, idx) => (
+                            <span key={idx} className="usage-tag">{use}</span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+        // --- Same Video Modal ---
+        function VideoModal({ videoUrl, onClose }) {
+            if (!videoUrl) return null;
+            return (
+                <div className="modal" onClick={onClose}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <button className="modal-close" onClick={onClose}>×</button>
+                        <iframe
+                            width="100%" height="500"
+                            src={videoUrl}
+                            title="Hardware Video"
+                            frameBorder="0"
+                            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            style={{borderRadius: '10px'}}
+                        ></iframe>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Same Main App ---
+        function HardwareInventoryApp() {
+            const [currentFilter, setCurrentFilter] = useState('all');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filteredData, setFilteredData] = useState(hardwareData);
+            const [selectedVideo, setSelectedVideo] = useState(null);
+
+            useEffect(() => {
+                let filtered = hardwareData;
+                if (currentFilter !== 'all') {
+                    filtered = filtered.filter(item => item.category === currentFilter);
+                }
+                if (searchTerm) {
+                    const searchLower = searchTerm.toLowerCase();
+                    filtered = filtered.filter(item =>
+                        item.name.toLowerCase().includes(searchLower) ||
+                        item.purpose.toLowerCase().includes(searchLower) ||
+                        item.specs.some(spec => spec.toLowerCase().includes(searchLower))
+                    );
+                }
+                setFilteredData(filtered);
+            }, [currentFilter, searchTerm]);
+
+            const groupedData = {};
+            filteredData.forEach(item => {
+                if (!groupedData[item.category]) groupedData[item.category] = [];
+                groupedData[item.category].push(item);
+            });
+            const totalUnits = hardwareData.reduce((sum, item) => sum + item.quantity, 0);
+
+            return (
+                <>
+                    <div className="hero">
+                        <div className="hero-content">
+                            <h1>NSDC AR/VR Lab 🔬</h1>
+                            <p>Experience the Future of AR/VR Technology</p>
+                            <div className="scroll-hint">↓</div>
+                        </div>
+                    </div>
+
+                    <header>
+                        <div className="nav-container">
+                            <button className={`nav-btn ${currentFilter === 'all' ? 'active' : ''}`} onClick={() => setCurrentFilter('all')}>All</button>
+                            <button className={`nav-btn ${currentFilter === 'headsets' ? 'active' : ''}`} onClick={() => setCurrentFilter('headsets')}>Headsets</button>
+                            <button className={`nav-btn ${currentFilter === 'tracking' ? 'active' : ''}`} onClick={() => setCurrentFilter('tracking')}>Tracking</button>
+                            <button className={`nav-btn ${currentFilter === 'ar' ? 'active' : ''}`} onClick={() => setCurrentFilter('ar')}>AR</button>
+                            <button className={`nav-btn ${currentFilter === 'cameras' ? 'active' : ''}`} onClick={() => setCurrentFilter('cameras')}>Cameras</button>
+                            <button className={`nav-btn ${currentFilter === 'computing' ? 'active' : ''}`} onClick={() => setCurrentFilter('computing')}>Systems</button>
+                            <button className={`nav-btn ${currentFilter === 'simulation' ? 'active' : ''}`} onClick={() => setCurrentFilter('simulation')}>Simulation</button>
+                            <button className={`nav-btn ${currentFilter === 'xr' ? 'active' : ''}`} onClick={() => setCurrentFilter('xr')}>XR Studio</button>
+                            <button className={`nav-btn ${currentFilter === 'accessories' ? 'active' : ''}`} onClick={() => setCurrentFilter('accessories')}>Accessories</button>
+                            <input type="text" className="search-box" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        </div>
+                    </header>
+
+                    <section>
+                        <h2>Why Choose NSDC ARVR Lab?</h2>
+                        <div className="stats-container">
+                            <div className="stat-card">
+                                <div className="stat-number">{hardwareData.length}</div>
+                                <div className="stat-label">Total Hardware Items</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-number">{totalUnits}</div>
+                                <div className="stat-label">Total Units in Lab</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-number">8</div>
+                                <div className="stat-label">Hardware Categories</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        {filteredData.length === 0 ? (
+                            <div className="empty-state">
+                                <h2>No hardware found</h2>
+                                <p>Try adjusting your search or filter criteria.</p>
+                            </div>
+                        ) : (
+                            Object.keys(groupedData).map(category => (
+                                <div key={category}>
+                                    <div className="section-title">
+                                        <span className="icon">{getCategoryIcon(category)}</span>
+                                        {getCategoryName(category)}
+                                    </div>
+                                    <div className="hardware-grid">
+                                        {groupedData[category].map((hardware, idx) => (
+                                            <HardwareCard key={idx} hardware={hardware} onVideoClick={setSelectedVideo} />
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        <VideoModal videoUrl={selectedVideo} onClose={() => setSelectedVideo(null)} />
+                    </section>
+
+                    <footer>
+                        <p>&copy; Made by Mohammed Mahir Mobin for FISAT AR/VR Lab</p>
+                    </footer>
+                </>
+            );
+        }
+
+        ReactDOM.render(<HardwareInventoryApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
